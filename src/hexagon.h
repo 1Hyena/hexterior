@@ -36,10 +36,16 @@ inline bool HEXAGON::is_master(size_t level) const {
     // Master hexagons have influence over their neighbouring hexagons. This
     // can be used to generate Perlin noise. Each level has a different set of
     // master hexagons. The higher the level the greater the vicinity.
-    size_t interval = level * 3;
     if (peel == 0 || level == 0) return true;
-    if (peel < level*2 || peel % level != 0) return false;
 
+    if (level % 2 == 0) {
+        size_t magic = std::pow(3, level/2);
+        if (peel % magic == 0 && (index % magic) == 0) return true;
+        return false;
+    }
+
+    size_t interval = std::pow(3, (level+1)/2);
+    if (peel < 2*(interval/3) || peel % (interval/3) != 0) return false;
     size_t index_on_edge = index % peel;
     if (((index_on_edge + (peel % interval)) % interval) == 0) return true;
     return false;
@@ -63,7 +69,13 @@ inline void HEXAGON::to_vertices(std::vector<ALLEGRO_VERTEX> * to) const {
         center_z*= peel*distance;
     }
 
-    bool highlight = is_master(3);
+    bool highlight1 = false || is_master(1);
+    bool highlight2 = false || is_master(2);
+    bool highlight3 = false || is_master(3);
+    bool highlight4 = false || is_master(4);
+    bool highlight5 = false || is_master(5);
+    bool highlight6 = false || is_master(6);
+    bool highlight7 = false || is_master(7);
 
     double dir = ALLEGRO_PI/2.0 + (ALLEGRO_PI/3.0)/2.0;
     for (size_t t=0; t<6; ++t) {
@@ -80,14 +92,21 @@ inline void HEXAGON::to_vertices(std::vector<ALLEGRO_VERTEX> * to) const {
             vtx.x = v_x;
             vtx.y = 0.2;
             vtx.z = v_z;
-            vtx.color = highlight ? al_map_rgb_f(1.0, 0.0, 0.0) : al_map_rgb_f(0.0, (t+1)/6.0, 0.0);
+            vtx.color = highlight7 ? al_map_rgb_f(0.0, 0.0, 0.0) :
+                        highlight6 ? al_map_rgb_f(1.0, 1.0, 1.0) :
+                        highlight5 ? al_map_rgb_f(0.0, 1.0, 1.0) :
+                        highlight4 ? al_map_rgb_f(1.0, 0.0, 1.0) :
+                        highlight3 ? al_map_rgb_f(1.0, 1.0, 0.0) :
+                        highlight2 ? al_map_rgb_f(0.0, 0.0, 1.0) :
+                        highlight1 ? al_map_rgb_f(1.0, 0.0, 0.0) :
+                                     al_map_rgb_f(0.0, (t+1)/6.0, 0.0);
             to->push_back(vtx);
             if (n == 1) dir += ALLEGRO_PI/3.0;
         }
     }
 }
 
-void HEXAGON::polar_to_axial(size_t peel, size_t index, int *x, int *y) {
+inline void HEXAGON::polar_to_axial(size_t peel, size_t index, int *x, int *y) {
     if (peel == 0) {
         *x = 0;
         *y = 0;
