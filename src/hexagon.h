@@ -20,8 +20,10 @@ class HEXAGON {
     void to_vertices(std::vector<ALLEGRO_VERTEX> *) const;
     bool is_master(size_t) const;
 
-    static void polar_to_axial(size_t, size_t, int *, int *);
-
+    static void   polar_to_axial (size_t, size_t, int *, int *);
+/*    static size_t polar_to_vortex(size_t, size_t);
+    static void   vortex_to_polar(size_t, size_t *, size_t *);
+*/
     private:
     size_t peel;
     size_t index;
@@ -113,7 +115,7 @@ inline void HEXAGON::polar_to_axial(size_t peel, size_t index, int *x, int *y) {
         return;
     }
     size_t sector = index / peel;
-    size_t index_on_edge = index % peel;    
+    size_t index_on_edge = index % peel;
     switch (sector) {
         case   0: *x = -index_on_edge;      *y = -peel + index_on_edge; break;
         case   1: *x = -peel;               *y = index_on_edge;         break;
@@ -124,6 +126,27 @@ inline void HEXAGON::polar_to_axial(size_t peel, size_t index, int *x, int *y) {
         default : break;
     }
 }
+/*
+inline size_t HEXAGON::polar_to_vortex(size_t peel, size_t index) {
+    // f(x)=6*(((x-1)*(x+2)+2)/2)+1
+    // where x is the number of peels, it gives the number of hexagons in total
+    if (peel == 0) return 0;
+    size_t index_on_edge = index % peel;
+
+    
+
+    1            =  1                1   
+    1+6          =  7                6  6                                        1
+    1+6+12       = 19               18  6 6 6                                    3 
+    1+6+12+18    = 37               36  6 6 6 6 6 6                              6
+    1+6+12+18+24 = 61               60  6 6 6 6 6 6 6 6 6 6                     10
+    1+6+12+18+24+30 = 91            90  6 6 6 6 6 6 6 6 6 6 6 6 6 6 6           15
+                   +36 = 127    
+}
+
+inline void HEXAGON::vortex_to_polar(size_t vortex, size_t * peel, size_t * index) {
+
+}*/
 
 #endif
 
