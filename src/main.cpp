@@ -23,13 +23,29 @@ int main(int argc, char **argv) {
     HEXAGON::gap  = 0.10;
     GRID grid;
     grid.fill(100);
+    for (size_t i=1; i<1000; i+=10) {
+        size_t peel, index;
+        HEXAGON::vortex_to_polar(i, &peel, &index);
+        if (grid[peel][index].is_master(1)) continue;
+        grid[peel][index].highlight = true;
+
+        std::map<size_t, size_t> masters;
+        grid[peel][index].to_masters(1, &masters);
+        for (const auto & m : masters) {
+            HEXAGON::vortex_to_polar(m.first, &peel, &index);
+            grid[peel][index].highlight = true;
+        }
+        break;
+    }
+    /*
     std::map<size_t, size_t> masters;
     grid[2][0].to_masters(1, &masters);
     for (const auto & m : masters) {
         size_t peel, index;
-        HEXAGON::vorthex_to_polar(m.first, &peel, &index);
+        HEXAGON::vortex_to_polar(m.first, &peel, &index);
         grid[peel][index].highlight = true;
     }
+    */
     grid.to_vertices(&vertices);
     printf("%lu\n", vertices.size());
 

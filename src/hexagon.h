@@ -12,7 +12,7 @@ class HEXAGON {
     HEXAGON(size_t peel, size_t index) : peel(peel), index(index) {
         polar_to_axial(peel, index, &axial_x, &axial_y);
         axial_to_cube(axial_x, axial_y, &cube_x, &cube_y, &cube_z);
-        vorthex = polar_to_vorthex(peel, index);
+        vortex = polar_to_vortex(peel, index);
     }
    ~HEXAGON() {}
 
@@ -23,18 +23,18 @@ class HEXAGON {
     void to_masters (size_t level, std::map<size_t, size_t> *) const;
     bool is_master(size_t) const;
 
-    static void   polar_to_axial  (size_t, size_t, int *, int *);
-    static void   cube_to_polar   (int, int, int, size_t *, size_t *);
-    static void   axial_to_cube   (int, int, int *, int *, int *);
-    static size_t polar_to_vorthex(size_t, size_t);
-    static void   vorthex_to_polar(size_t, size_t *, size_t *);
+    static void   polar_to_axial (size_t, size_t, int *, int *);
+    static void   cube_to_polar  (int, int, int, size_t *, size_t *);
+    static void   axial_to_cube  (int, int, int *, int *, int *);
+    static size_t polar_to_vortex(size_t, size_t);
+    static void   vortex_to_polar(size_t, size_t *, size_t *);
 
     bool highlight;
 
     private:
     size_t peel;
     size_t index;
-    size_t vorthex;
+    size_t vortex;
     int axial_x;
     int axial_y;
     int cube_x;
@@ -66,14 +66,14 @@ inline bool HEXAGON::is_master(size_t level) const {
 
 inline void HEXAGON::to_masters(size_t level, std::map<size_t, size_t> *to) const {
     if (is_master(level)) {
-        (*to)[vorthex]++;
+        (*to)[vortex]++;
         return;
     }
     if (level == 1) {
         size_t p, i;
-        cube_to_polar(cube_x,   cube_y+1, cube_z-1, &p, &i); (*to)[polar_to_vorthex(p, i)]++;
-        cube_to_polar(cube_x-1, cube_y,   cube_z+1, &p, &i); (*to)[polar_to_vorthex(p, i)]++;
-        cube_to_polar(cube_x+1, cube_y-1, cube_z,   &p, &i); (*to)[polar_to_vorthex(p, i)]++;
+        cube_to_polar(cube_x,   cube_y+1, cube_z-1, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+        cube_to_polar(cube_x-1, cube_y,   cube_z+1, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+        cube_to_polar(cube_x+1, cube_y-1, cube_z,   &p, &i); (*to)[polar_to_vortex(p, i)]++;
     }
 }
 
@@ -171,32 +171,32 @@ inline void HEXAGON::axial_to_cube(int axial_x, int axial_y, int *cube_x, int *c
     *cube_y = -axial_x-axial_y;
 }
 
-inline size_t HEXAGON::polar_to_vorthex(size_t peel, size_t index) {
+inline size_t HEXAGON::polar_to_vortex(size_t peel, size_t index) {
     if (peel == 0) return 0;
     size_t prev_peel = peel-1;
-    size_t vorthex_size = 3*prev_peel*prev_peel+3*prev_peel+1;
+    size_t vortex_size = 3*prev_peel*prev_peel+3*prev_peel+1;
     size_t index_on_rim = index % (peel*6);
-    return vorthex_size + index_on_rim;
+    return vortex_size + index_on_rim;
 }
 
-inline void HEXAGON::vorthex_to_polar(size_t vorthex, size_t * peel, size_t * index) {
-    if (vorthex == 0) {
+inline void HEXAGON::vortex_to_polar(size_t vortex, size_t * peel, size_t * index) {
+    if (vortex == 0) {
         *peel  = 0;
         *index = 0;
         return;
     }
     const double a = 3.0;
     const double b = 3.0;
-    double c = 1.0 - vorthex;
+    double c = 1.0 - vortex;
     // We solve the quadratic equation f(x) = 3x^2 + 3x + 1 here.
     double temp = -0.5 * (b + (std::signbit(b) ? -1.0 : 1.0) * sqrt(b*b - 4.0*a*c));
     double x1 = temp / a;
     double x2 = c / temp;
 
     size_t prev_peel = std::max(x1, x2);
-    size_t first_index = polar_to_vorthex(prev_peel+1, 0);
+    size_t first_index = polar_to_vortex(prev_peel+1, 0);
     *peel = prev_peel + 1;
-    *index = vorthex - first_index;
+    *index = vortex - first_index;
 }
 
 #endif
