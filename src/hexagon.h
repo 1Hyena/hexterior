@@ -16,8 +16,11 @@ class HEXAGON {
     }
    ~HEXAGON() {}
 
-    size_t get_peel()   const {return peel;}
-    size_t get_index()  const {return index;}
+    size_t get_peel()    const {return peel;}
+    size_t get_index()   const {return index;}
+    size_t get_vortex()  const {return vortex;}
+    int    get_x()       const {return axial_x;}
+    int    get_y()       const {return axial_y;}
 
     void to_vertices(std::vector<ALLEGRO_VERTEX> *) const;
     void to_masters (size_t level, std::map<size_t, size_t> *) const;
@@ -28,6 +31,7 @@ class HEXAGON {
     static void   axial_to_cube  (int, int, int *, int *, int *);
     static size_t polar_to_vortex(size_t, size_t);
     static void   vortex_to_polar(size_t, size_t *, size_t *);
+    static bool   check_level    (size_t, size_t, size_t);
 
     bool highlight;
 
@@ -45,7 +49,7 @@ class HEXAGON {
 double HEXAGON::size = 1.0;
 double HEXAGON::gap  = 0.0;
 
-inline bool HEXAGON::is_master(size_t level) const {
+inline bool HEXAGON::check_level(size_t peel, size_t index, size_t level) {
     // Master hexagons have influence over their neighbouring hexagons. This
     // can be used to generate Perlin noise. Each level has a different set of
     // master hexagons. The higher the level the greater the vicinity.
@@ -64,16 +68,158 @@ inline bool HEXAGON::is_master(size_t level) const {
     return false;
 }
 
+inline bool HEXAGON::is_master(size_t level) const {
+    return check_level(peel, index, level);
+}
+
 inline void HEXAGON::to_masters(size_t level, std::map<size_t, size_t> *to) const {
     if (is_master(level)) {
         (*to)[vortex]++;
         return;
     }
-    if (level == 1) {
+    std::map<size_t, size_t> buf;
+    if (level >= 1) {
+        //unsigned char type = 0;
+        size_t modx = std::signbit(axial_x) ? (3 + axial_x % 3) % 3 : axial_x % 3;
+        size_t mody = std::signbit(axial_y) ? (3 + axial_y % 3) % 3 : axial_y % 3;
+        size_t type = (modx+2*mody) % 3;
+        size_t p, i;
+        printf("%d:%d -> modx: %lu, mody: %lu;\n", axial_x, axial_y, modx, mody);
+        /*
+             if (modx == 0 && mody == 0) type = 0; // we are master             0 -> 0    0
+        else if (modx == 1 && mody == 0) type = 1; // master top right          1 -> 1    1
+        else if (modx == 2 && mody == 0) type = 2; // master bottom left        2 -> 2    2 
+        else if (modx == 0 && mody == 1) type = 2; //                           1 -> 2    2
+        else if (modx == 1 && mody == 1) type = 0; //                           2 -> 0    3 
+        else if (modx == 2 && mody == 1) type = 1; //                           3 -> 1    4
+        else if (modx == 0 && mody == 2) type = 1; //                           2 -> 1    4
+        else if (modx == 1 && mody == 2) type = 2; //                           3 -> 2    5
+        else if (modx == 2 && mody == 2) type = 0; //                           4 -> 0    6
+        */
+        switch (type) {
+            case  1: { 
+                        cube_to_polar(cube_x+1, cube_y,   cube_z-1, &p, &i); buf[polar_to_vortex(p, i)]++;
+                        cube_to_polar(cube_x-1, cube_y+1, cube_z,   &p, &i); buf[polar_to_vortex(p, i)]++;
+                        cube_to_polar(cube_x,   cube_y-1, cube_z+1, &p, &i); buf[polar_to_vortex(p, i)]++;
+                        break; // one master at top right
+                     }
+            case  2: { 
+                        cube_to_polar(cube_x,   cube_y+1, cube_z-1, &p, &i); buf[polar_to_vortex(p, i)]++;
+                        cube_to_polar(cube_x-1, cube_y,   cube_z+1, &p, &i); buf[polar_to_vortex(p, i)]++;
+                        cube_to_polar(cube_x+1, cube_y-1, cube_z,   &p, &i); buf[polar_to_vortex(p, i)]++;
+                        break; // one master at bottom left
+                     }
+            default: buf[vortex]++; break; // we are master
+        }
+        
+/*
         size_t p, i;
         cube_to_polar(cube_x,   cube_y+1, cube_z-1, &p, &i); (*to)[polar_to_vortex(p, i)]++;
         cube_to_polar(cube_x-1, cube_y,   cube_z+1, &p, &i); (*to)[polar_to_vortex(p, i)]++;
         cube_to_polar(cube_x+1, cube_y-1, cube_z,   &p, &i); (*to)[polar_to_vortex(p, i)]++;
+        */
+    }
+    
+    if (level >= 2) {
+        std::map<size_t, size_t> buf2;
+        for (const auto & a : buf) {
+            size_t p, i;
+            vortex_to_polar(a.first, &p, &i);
+            if (check_level(p, i, 2)) buf2[a.first]++;
+            else {
+                int ax, ay;
+                int cx, cy, cz;
+                polar_to_axial (p, i, &ax, &ay);
+                axial_to_cube  (ax, ay, &cx, &cy, &cz);
+
+                if ( (std::signbit(ay) && (std::abs(ay)) % 3 == 2) || (!std::signbit(ay) && ay % 3 == 1) ) {
+                    // point down
+                    cube_to_polar(cx+1+1, cy+0-1, cz+0-1, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                    cube_to_polar(cx+0-1, cy+1+1, cz-1+0, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                    cube_to_polar(cx+0-1, cy-1+0, cz+1+1, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                }
+                else {
+                    // point up
+                    cube_to_polar(cx+1+0, cy+0+1, cz-1-1, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                    cube_to_polar(cx-1-1, cy+0+1, cz+1+0, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                    cube_to_polar(cx+0+1, cy-1-1, cz+1+0, &p, &i); buf2[polar_to_vortex(p, i)]++;                        
+                }
+            }
+        }
+        buf.swap(buf2);
+    }
+
+    if (level >= 3) {
+        std::map<size_t, size_t> buf2;
+        for (const auto & a : buf) {
+            size_t p, i;
+            vortex_to_polar(a.first, &p, &i);
+            if (check_level(p, i, 3)) buf2[a.first]++;
+            else {
+                int ax, ay;
+                int cx, cy, cz;
+                polar_to_axial (p, i, &ax, &ay);
+                axial_to_cube  (ax, ay, &cx, &cy, &cz);
+
+                size_t modx = std::signbit(ax/3) ? (3 + (ax/3) % 3) % 3 : (ax/3) % 3;
+                size_t mody = std::signbit(ay/3) ? (3 + (ay/3) % 3) % 3 : (ay/3) % 3;
+                size_t type = (modx+2*mody) % 3;
+                size_t p, i;
+                printf("level 3, %d:%d -> modx: %lu, mody: %lu;\n", ax, ay, modx, mody);
+
+                switch (type) {
+                    case  1: { 
+                                cube_to_polar(cx+3, cy,   cz-3, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                                cube_to_polar(cx-3, cy+3, cz,   &p, &i); buf2[polar_to_vortex(p, i)]++;
+                                cube_to_polar(cx,   cy-3, cz+3, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                                break; // one master at top right
+                             }
+                    case  2: { 
+                                cube_to_polar(cx,   cy+3, cz-3, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                                cube_to_polar(cx-3, cy,   cz+3, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                                cube_to_polar(cx+3, cy-3, cz,   &p, &i); buf2[polar_to_vortex(p, i)]++;
+                                break; // one master at bottom left
+                             }
+                    default: buf2[vortex]++; break; // we are master
+                }            
+            }
+        }
+        buf.swap(buf2);    
+    }
+
+    if (level >= 4) {
+        std::map<size_t, size_t> buf2;
+        for (const auto & a : buf) {
+            size_t p, i;
+            vortex_to_polar(a.first, &p, &i);
+            if (check_level(p, i, 4)) buf2[a.first]++;
+            else {
+                int ax, ay;
+                int cx, cy, cz;
+                polar_to_axial (p, i, &ax, &ay);
+                axial_to_cube  (ax, ay, &cx, &cy, &cz);
+
+                ax/=3;
+                ay/=3;
+                if ( (std::signbit(ay) && (std::abs(ay)) % 3 == 2) || (!std::signbit(ay) && ay % 3 == 1) ) {
+                    // point down
+                    cube_to_polar(cx+2*3, cy-1*3, cz-1*3, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                    cube_to_polar(cx-1*3, cy+2*3, cz-1*3, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                    cube_to_polar(cx-1*3, cy-1*3, cz+2*3, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                }
+                else {
+                    // point up
+                    cube_to_polar(cx+1*3, cy+1*3, cz-2*3, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                    cube_to_polar(cx-2*3, cy+1*3, cz+1*3, &p, &i); buf2[polar_to_vortex(p, i)]++;
+                    cube_to_polar(cx+1*3, cy-2*3, cz+1*3, &p, &i); buf2[polar_to_vortex(p, i)]++;                        
+                }
+            }
+        }
+        buf.swap(buf2);
+    }
+
+    for (const auto & a : buf) {
+        (*to)[a.first]+=a.second;
     }
 }
 
@@ -98,8 +244,8 @@ inline void HEXAGON::to_vertices(std::vector<ALLEGRO_VERTEX> * to) const {
     bool highlight1 = false || is_master(1);
     bool highlight2 = false || is_master(2);
     bool highlight3 = false || is_master(3);
-    bool highlight4 = false && is_master(4);
-    bool highlight5 = false && is_master(5);
+    bool highlight4 = false || is_master(4);
+    bool highlight5 = false || is_master(5);
     bool highlight6 = false && is_master(6);
     bool highlight7 = false && is_master(7);
 
@@ -126,6 +272,7 @@ inline void HEXAGON::to_vertices(std::vector<ALLEGRO_VERTEX> * to) const {
                         highlight3 ? al_map_rgb_f(1.0, 1.0, 0.0) :
                         highlight2 ? al_map_rgb_f(0.0, 0.0, 1.0) :
                         highlight1 ? al_map_rgb_f(1.0, 0.0, 0.0) :
+                        vortex == 1? al_map_rgb_f(0.0, (1.0+(t+1)/6.0)/2.0, 0.0) :
                                      al_map_rgb_f(0.0, (t+1)/6.0, 0.0);
             to->push_back(vtx);
             if (n == 1) dir += ALLEGRO_PI/3.0;
@@ -148,7 +295,7 @@ inline void HEXAGON::polar_to_axial(size_t peel, size_t index, int *x, int *y) {
         case   3: *x = index_on_edge;       *y = peel - index_on_edge;  break;
         case   4: *x = peel;                *y = -index_on_edge;        break;
         case   5: *x = peel-index_on_edge;  *y = -peel;                 break; 
-        default : break;
+        default : *x = 0;                   *y = 0;                     break;
     }
 }
 

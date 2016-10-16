@@ -23,19 +23,27 @@ int main(int argc, char **argv) {
     HEXAGON::gap  = 0.10;
     GRID grid;
     grid.fill(100);
-    for (size_t i=1; i<1000; i+=10) {
+    size_t top_level = 4;
+    for (size_t i=17; i<2000; i+=1) {
         size_t peel, index;
         HEXAGON::vortex_to_polar(i, &peel, &index);
-        if (grid[peel][index].is_master(1)) continue;
-        grid[peel][index].highlight = true;
+        if (grid[peel][index].is_master(top_level)) continue;
+        //grid[peel][index].highlight = true;
 
         std::map<size_t, size_t> masters;
-        grid[peel][index].to_masters(1, &masters);
+        grid[peel][index].to_masters(top_level, &masters);
+        printf("Checking masters of %lu:%lu (%d, %d), vortex %lu.\n", peel, index, grid[peel][index].get_x(), grid[peel][index].get_y(), grid[peel][index].get_vortex());
+        bool break_all = false;
         for (const auto & m : masters) {
             HEXAGON::vortex_to_polar(m.first, &peel, &index);
             grid[peel][index].highlight = true;
+            if (grid[peel][index].is_master(top_level) == false) {
+                printf("vortex %lu (%lu:%lu) is not master!\n", grid[peel][index].get_vortex(), peel, index);
+                break_all = true;
+            }
         }
-        break;
+        if (break_all) break;
+        //break;
     }
     /*
     std::map<size_t, size_t> masters;
