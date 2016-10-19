@@ -19,16 +19,18 @@ ALLEGRO allegro;
 std::vector<ALLEGRO_VERTEX> vertices;
 
 int main(int argc, char **argv) {
-    HEXAGON::size = 0.25;
+    HEXAGON::size = 0.025;
     HEXAGON::gap  = 0.10;
     GRID grid;
     grid.fill(100);
-    size_t top_level = 3;
-    for (size_t i=0; i<3000; i+=1) {
+    grid.generate_heightmap(2);
+    
+    size_t top_level = 7;
+    for (size_t i=1777; i<3000; i+=1) {
         size_t peel, index;
         HEXAGON::vortex_to_polar(i, &peel, &index);
-        if (grid[peel][index].is_master(top_level)) continue;
-        //grid[peel][index].highlight = true;
+        //if (grid[peel][index].is_master(top_level)) continue;
+        grid[peel][index].highlight = true;
 
         std::map<size_t, size_t> masters;
         grid[peel][index].to_masters(top_level, &masters);
@@ -42,8 +44,9 @@ int main(int argc, char **argv) {
             } else grid[peel][index].highlight = true;
         }
         if (break_all) break;
-        //break;
+        break;
     }
+    
     /*
     std::map<size_t, size_t> masters;
     grid[2][0].to_masters(1, &masters);
@@ -54,7 +57,7 @@ int main(int argc, char **argv) {
     }
     */
     grid.to_vertices(&vertices);
-    printf("%lu\n", vertices.size());
+    //printf("%lu\n", vertices.size());
 
     //grid.populate(0);
     //HEXAGON hex;

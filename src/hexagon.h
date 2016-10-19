@@ -2,6 +2,7 @@
 #define HEXAGON_H_20_09_2016
 
 #include <random>
+#include <set>
 
 #include "vector_3d.h"
 
@@ -16,19 +17,24 @@ class HEXAGON {
         axial_to_cube(axial_x, axial_y, &cube_x, &cube_y, &cube_z);
         vortex = polar_to_vortex(peel, index);
         highlight = false;
+        height    = 0.0;
     }
    ~HEXAGON() {}
 
-    size_t get_peel()    const {return peel;}
-    size_t get_index()   const {return index;}
-    size_t get_vortex()  const {return vortex;}
-    int    get_x()       const {return axial_x;}
-    int    get_y()       const {return axial_y;}
-    double get_noise()   const;
+    size_t get_peel()        const {return peel;}
+    size_t get_index()       const {return index;}
+    size_t get_vortex()      const {return vortex;}
+    int    get_x()           const {return axial_x;}
+    int    get_y()           const {return axial_y;}
+    double get_noise()       const;
+    double get_noise(size_t) const;
 
     void to_vertices(std::vector<ALLEGRO_VERTEX> *) const;
     void to_masters (size_t level, std::map<size_t, size_t> *) const;
     bool is_master(size_t) const;
+
+    double get_height() const   {return height;}
+    void   set_height(double h) {height = h;}
 
     static void   polar_to_axial (size_t, size_t, int *, int *);
     static void   cube_to_polar  (int, int, int, size_t *, size_t *);
@@ -36,6 +42,7 @@ class HEXAGON {
     static size_t polar_to_vortex(size_t, size_t);
     static void   vortex_to_polar(size_t, size_t *, size_t *);
     static bool   check_level    (size_t, size_t, size_t);
+    static size_t cube_distance  (int, int, int, int, int, int);
 
     bool highlight;
 
@@ -51,12 +58,20 @@ class HEXAGON {
 
     mutable std::mt19937 gen{0};
     mutable std::uniform_real_distribution<double> dis{0, 1};
+
+    double height;
 };
 
 double HEXAGON::size = 1.0;
 double HEXAGON::gap  = 0.0;
 
 inline double HEXAGON::get_noise() const {
+    return dis(gen);
+}
+
+inline double HEXAGON::get_noise(size_t level) const {
+    gen.seed(vortex);
+    gen.discard(level);
     return dis(gen);
 }
 
@@ -84,22 +99,55 @@ inline bool HEXAGON::is_master(size_t level) const {
 }
 
 inline void HEXAGON::to_masters(size_t level, std::map<size_t, size_t> *to) const {
+    size_t p, i;
+    if (level == 0) return;
+
+    std::map<size_t, size_t> masters;
+
     if (is_master(level)) {
+      /*  size_t power;
+        (*to)[vortex]+=3;
+        if (level % 2) {
+            power = std::pow(3, level/2);
+            cube_to_polar(cube_x+2*power, cube_y-1*power, cube_z-1*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x-1*power, cube_y+2*power, cube_z-1*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x-1*power, cube_y-1*power, cube_z+2*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x+1*power, cube_y+1*power, cube_z-2*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x-2*power, cube_y+1*power, cube_z+1*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x+1*power, cube_y-2*power, cube_z+1*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+        }
+        else {
+            power = std::pow(3, (level+1)/2);
+            cube_to_polar(cube_x+1*power, cube_y,         cube_z-1*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x-1*power, cube_y+1*power, cube_z,         &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x,         cube_y-1*power, cube_z+1*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x,         cube_y+1*power, cube_z-1*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x-1*power, cube_y,         cube_z+1*power, &p, &i); (*to)[polar_to_vortex(p, i)]++;
+            cube_to_polar(cube_x+1*power, cube_y-1*power, cube_z,         &p, &i); (*to)[polar_to_vortex(p, i)]++;
+        }
+        return;
+    */
+        /*
+        cube_to_polar(cube_x+1, cube_y,             cube_z-1, &p, &i); masters[polar_to_vortex(p, i)]++;
+        cube_to_polar(cube_x-1, cube_y+1,           cube_z,   &p, &i); masters[polar_to_vortex(p, i)]++;
+        cube_to_polar(cube_x,             cube_y-1, cube_z+1, &p, &i); masters[polar_to_vortex(p, i)]++;
+        cube_to_polar(cube_x,             cube_y+1, cube_z-1, &p, &i); masters[polar_to_vortex(p, i)]++;
+        cube_to_polar(cube_x-1, cube_y,             cube_z+1, &p, &i); masters[polar_to_vortex(p, i)]++;
+        cube_to_polar(cube_x+1, cube_y-1,           cube_z,   &p, &i); masters[polar_to_vortex(p, i)]++;
+        */
         (*to)[vortex]++;
         return;
     }
-
-    std::map<size_t, size_t> masters;
-    masters[vortex] = 1;
+    else masters[vortex] = 1;
 
     for (size_t n=1; n<=level; ++n) {
         std::map<size_t, size_t> buf;
-        size_t power, p, i;
+        size_t power;
 
         if (n % 2 != 0) {
             power = std::pow(3, n/2);
             for (const auto & a : masters) {
-                size_t p, i;
+
                 vortex_to_polar(a.first, &p, &i);
                 if (check_level(p, i, n)) {
                     buf[a.first]++;
@@ -166,9 +214,58 @@ inline void HEXAGON::to_masters(size_t level, std::map<size_t, size_t> *to) cons
         masters.swap(buf);
     }
 
+    std::set<size_t> weights;
+    std::map<size_t, size_t> distances;
+    size_t max_d = 0;
     for (const auto & a : masters) {
-        (*to)[a.first]+=a.second;
+        int ax, ay;
+        int cx, cy, cz;
+        vortex_to_polar(a.first, &p, &i);
+        polar_to_axial (p, i, &ax, &ay);
+        axial_to_cube  (ax, ay, &cx, &cy, &cz);
+        size_t d = cube_distance(cx, cy, cz, cube_x, cube_y, cube_z);
+        distances[a.first] = d;
+        if (d > max_d) max_d = d;
     }
+
+    for (const auto & a : distances) {
+        weights.insert(max_d - a.second + 1);
+    }
+
+    while (weights.size() > 1) {
+        size_t w = *weights.begin();
+        weights.erase(w);
+    }
+
+    size_t added=0;
+    for (const auto & a : distances) {
+        size_t w = max_d - a.second + 1;
+        if (weights.count(w) > 0) {
+            (*to)[a.first] += w;
+            if (++added >= 1) break;
+        }
+    }
+
+    /*for (const auto & a : masters) {
+        (*to)[a.first]+=a.second;
+    }*/
+/*
+    std::set<size_t> weights;
+    for (const auto & a : masters) weights.insert(a.second);
+
+    while (weights.size() > 4) {
+        size_t w = *weights.begin();
+        weights.erase(w);
+    }
+
+    size_t added=0;
+    for (const auto & a : masters) {
+        if (weights.count(a.second) > 0) {
+            (*to)[a.first] += a.second;
+            if (++added == 3) break;
+        }
+    }
+*/
 }
 
 inline void HEXAGON::to_vertices(std::vector<ALLEGRO_VERTEX> * to) const {
@@ -199,7 +296,6 @@ inline void HEXAGON::to_vertices(std::vector<ALLEGRO_VERTEX> * to) const {
 
     gen.seed(vortex);
     double dir = ALLEGRO_PI/2.0 + (ALLEGRO_PI/3.0)/2.0;
-    double noise = get_noise();
     for (size_t t=0; t<6; ++t) {
         for (size_t n=0; n<3; ++n) {
             double v_x = center_x;
@@ -215,7 +311,7 @@ inline void HEXAGON::to_vertices(std::vector<ALLEGRO_VERTEX> * to) const {
             vtx.y = 0.2;
             vtx.z = v_z;
             if (highlight) {
-                vtx.color = highlight7 ? al_map_rgb_f(0.0, 0.0, 0.0) :
+                vtx.color = highlight7 ? al_map_rgb_f(0.0, 0.8, 0.5) :
                             highlight6 ? al_map_rgb_f(1.0, 1.0, 1.0) :
                             highlight5 ? al_map_rgb_f(0.0, 1.0, 1.0) :
                             highlight4 ? al_map_rgb_f(1.0, 0.0, 1.0) :
@@ -223,7 +319,7 @@ inline void HEXAGON::to_vertices(std::vector<ALLEGRO_VERTEX> * to) const {
                             highlight2 ? al_map_rgb_f(0.0, 0.0, 1.0) :
                             highlight1 ? al_map_rgb_f(1.0, 0.0, 0.0) : al_map_rgb_f(0.0, (t+1)/6.0, 0.0);
             }
-            else vtx.color = al_map_rgb_f(noise, noise, noise);
+            else vtx.color = al_map_rgb_f(height, height, height);
             to->push_back(vtx);
             if (n == 1) dir += ALLEGRO_PI/3.0;
         }
@@ -294,6 +390,10 @@ inline void HEXAGON::vortex_to_polar(size_t vortex, size_t * peel, size_t * inde
     size_t first_index = polar_to_vortex(prev_peel+1, 0);
     *peel = prev_peel + 1;
     *index = vortex - first_index;
+}
+
+inline size_t HEXAGON::cube_distance(int x1, int y1, int z1, int x2, int y2, int z2) {
+    return std::max(std::abs(x1 - x2), std::max(std::abs(y1 - y2), std::abs(z1 - z2)));
 }
 
 #endif

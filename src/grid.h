@@ -15,6 +15,7 @@ class GRID {
 
     void fill(size_t peels);
     void to_vertices(std::vector<ALLEGRO_VERTEX> *);
+    void generate_heightmap(size_t);
 
     private:
     std::map<size_t, PEEL> peels;
@@ -38,5 +39,45 @@ inline void GRID::fill(size_t peel_count) {
 
 inline void GRID::to_vertices(std::vector<ALLEGRO_VERTEX> * to) {
     for (const auto & p : peels) p.second.to_vertices(to);
+}
+
+inline void GRID::generate_heightmap(size_t /*levels*/) {
+    size_t peel_count = peels.size();
+    for (size_t i=0; i<peel_count; ++i) {
+        size_t sz = (*this)[i].size();
+        for (size_t j=0; j<sz; ++j) {
+            std::map<size_t, size_t> last_masters;
+            (*this)[i][j].to_masters(3, &last_masters);
+
+            size_t weight=0;
+            double noise = 0.0;
+            for (const auto & a : last_masters) weight += a.second;
+            for (const auto & a : last_masters) {
+                size_t peel, index;
+                HEXAGON::vortex_to_polar(a.first, &peel, &index);
+                if (peel >= peel_count) {
+                    weight -= a.second;
+                    continue;
+                }
+                noise += (*this)[peel][index].get_noise(1) * a.second/double(weight);
+            }
+
+            (*this)[i][j].set_height(noise);
+/*
+            for (size_t k=2; k<=levels; ++k) {
+                std::map<size_t, size_t> masters;
+                masters.swap(last_masters);
+                
+
+                for (const auto & a : masters) {
+                    size_t peel, index;
+                    vortex_to_polar(a.first, &peel, &index);
+                    
+                }
+            }
+*/
+        }
+        
+    }
 }
 
