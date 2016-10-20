@@ -19,14 +19,20 @@ ALLEGRO allegro;
 std::vector<ALLEGRO_VERTEX> vertices;
 
 int main(int argc, char **argv) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_t> dis(0, 2999);
+
     HEXAGON::size = 0.025;
     HEXAGON::gap  = 0.10;
     GRID grid;
     grid.fill(100);
     grid.generate_heightmap(2);
     
-    size_t top_level = 7;
-    for (size_t i=1777; i<3000; i+=1) {
+    size_t top_level = 4;
+    size_t start_vortex = dis(gen);
+    printf("start_vortex=%lu;\n", start_vortex);
+    for (size_t i=start_vortex; i<3000; i+=1) {
         size_t peel, index;
         HEXAGON::vortex_to_polar(i, &peel, &index);
         //if (grid[peel][index].is_master(top_level)) continue;

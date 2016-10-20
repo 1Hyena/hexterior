@@ -47,7 +47,7 @@ inline void GRID::generate_heightmap(size_t /*levels*/) {
         size_t sz = (*this)[i].size();
         for (size_t j=0; j<sz; ++j) {
             std::map<size_t, size_t> last_masters;
-            (*this)[i][j].to_masters(3, &last_masters);
+            (*this)[i][j].to_masters(4, &last_masters);
 
             size_t weight=0;
             double noise = 0.0;

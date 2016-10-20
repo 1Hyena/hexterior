@@ -214,9 +214,9 @@ inline void HEXAGON::to_masters(size_t level, std::map<size_t, size_t> *to) cons
         masters.swap(buf);
     }
 
-    std::set<size_t> weights;
-    std::map<size_t, size_t> distances;
-    size_t max_d = 0;
+    std::set<size_t> distances;
+    std::map<size_t, size_t> distance_map;
+
     for (const auto & a : masters) {
         int ax, ay;
         int cx, cy, cz;
@@ -224,26 +224,82 @@ inline void HEXAGON::to_masters(size_t level, std::map<size_t, size_t> *to) cons
         polar_to_axial (p, i, &ax, &ay);
         axial_to_cube  (ax, ay, &cx, &cy, &cz);
         size_t d = cube_distance(cx, cy, cz, cube_x, cube_y, cube_z);
-        distances[a.first] = d;
-        if (d > max_d) max_d = d;
+        distance_map[a.first] = d;
+        distances.insert(d);
     }
 
-    for (const auto & a : distances) {
-        weights.insert(max_d - a.second + 1);
+    /*while (distances.size() > 3) {
+        size_t w = *distances.rbegin();
+        distances.erase(w);
+    }*/
+    /*
+    while (distances.size() > 3) {
+        size_t w = *distances.rbegin();
+        distances.erase(w);    
     }
-
-    while (weights.size() > 1) {
-        size_t w = *weights.begin();
-        weights.erase(w);
-    }
+    size_t nearest = *distances.begin();
+    bool nearest_used = false;
 
     size_t added=0;
-    for (const auto & a : distances) {
-        size_t w = max_d - a.second + 1;
-        if (weights.count(w) > 0) {
-            (*to)[a.first] += w;
-            if (++added >= 1) break;
+    for (const auto & a : distance_map) {
+        size_t d = a.second;
+        if (distances.count(d) > 0) {
+            if (d == nearest && !nearest_used) {
+                (*to)[a.first] = 1;
+                //nearest_used = true;
+            }
+            else (*to)[a.first] = 0;
+            //if (++added >= 3) break;
         }
+    }
+*/
+    std::map<size_t, size_t> final_results;
+    size_t added = 0;
+    size_t distance_sum = 0;
+    while (distances.size() > 3) distances.erase(*distances.rbegin());
+    size_t nearest = *distances.begin();
+    while (distances.size() > 0) {
+        size_t d = *distances.begin();
+        distances.erase(d);
+        
+        std::map<size_t, size_t> buf;
+        size_t distance_buf = 0;
+        for (const auto & a : distance_map) {
+            if (a.second == d && added < 3) {
+                //if (d == nearest) (*to)[a.first] = 1;
+                //else              (*to)[a.first] = 0;
+                //distance_sum += d;
+                //final_results[a.first] = d;
+                //added++;
+                distance_buf += d;
+                buf[a.first] = d;
+            }
+        }
+
+        if (buf.size() > 0 && (buf.size() != 2 || final_results.size() != 2)) {
+            distance_sum += distance_buf;
+            final_results.insert(buf.begin(), buf.end());
+            added += buf.size();
+        }
+
+        if (added >= 3) break;
+    }
+
+    /*if (added == 3) {
+        std::vector<double> sides;
+        double side = 9.0;
+        double height = side / 2.0 * std::sqrt(3.0);
+        for (const auto & a : final_results) sides.push_back(double(a.second));
+        double a = sides[0];
+        double b = sides[1];
+        double c = sides[2];
+        
+        double s=(a+b+c)/2.0;
+        double area=(sqrt)(s*(s-a)*(s-b)*(s-c));        
+    }*/
+
+    for (const auto & a : final_results) {
+        (*to)[a.first]+=(a.second == nearest ? 1 : 0)/* std::pow(distance_sum - a.second, 2)*/;
     }
 
     /*for (const auto & a : masters) {

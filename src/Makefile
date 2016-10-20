@@ -2,7 +2,7 @@ NAME    = hexterior
 CC      = g++
 PROF    = -O2
 ALLEGRO = -L/usr/lib -lallegro -lallegro_font -lallegro_primitives -lallegro_color -lallegro_image
-C_FLAGS = -std=c++11 -Wall -Wextra -Werror -pedantic-errors $(PROF)
+C_FLAGS = -std=c++11 -Wall -Wextra -Werror -Wno-error=unused-variable -pedantic-errors $(PROF)
 L_FLAGS = -lm -lstdc++ $(ALLEGRO) $(PROF)
 OBJ_DIR = obj
 
